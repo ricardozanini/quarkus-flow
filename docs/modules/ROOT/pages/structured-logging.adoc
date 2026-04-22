@@ -51,6 +51,134 @@ quarkus.flow.structured-logging.log-level=INFO
 
 IMPORTANT: When you enable structured logging, Quarkus Flow **automatically configures** a separate file handler to write workflow events to a dedicated file. Events are written to `target/quarkus-flow-events.log` in dev/test mode, and `/var/log/quarkus-flow/events.log` in production. This ensures clean separation between application logs and event streams. See xref:#integration-with-quarkus-logging-json[Integration with quarkus-logging-json] for details.
 
+== Timestamp Format
+
+By default, structured logging events use ISO 8601 timestamp format with nanosecond precision (e.g., `2026-04-21T21:36:06.427832969Z`). You can configure the format to match your log processor's requirements.
+
+=== Available Formats
+
+[cols="1,2,1"]
+|===
+|Format |Description |Example
+
+|`iso8601`
+|ISO 8601 with nanosecond precision (default)
+|`"2026-04-21T21:36:06.427832969Z"`
+
+|`epoch-seconds`
+|Unix epoch as double with fractional seconds
+|`1776807366.427833`
+
+|`epoch-millis`
+|Unix epoch milliseconds as long
+|`1776807366428`
+
+|`epoch-nanos`
+|Unix epoch nanoseconds as long
+|`1776807366427832969`
+
+|`custom`
+|Custom DateTimeFormatter pattern
+|User-defined
+|===
+
+=== Configuration
+
+[source,properties]
+----
+# Default: ISO 8601 (backward compatible)
+quarkus.flow.structured-logging.timestamp-format=iso8601
+
+# Unix epoch with fractional seconds (PostgreSQL via FluentBit)
+quarkus.flow.structured-logging.timestamp-format=epoch-seconds
+
+# Unix epoch milliseconds (Elasticsearch)
+quarkus.flow.structured-logging.timestamp-format=epoch-millis
+
+# Unix epoch nanoseconds (high-precision time-series)
+quarkus.flow.structured-logging.timestamp-format=epoch-nanos
+
+# Custom format
+quarkus.flow.structured-logging.timestamp-format=custom
+quarkus.flow.structured-logging.timestamp-pattern=yyyy-MM-dd'T'HH:mm:ss.SSSXXX
+----
+
+=== Use Case: FluentBit → PostgreSQL
+
+When using FluentBit's `pgsql` output plugin to insert structured logs into PostgreSQL `TIMESTAMP WITH TIME ZONE` columns, use `epoch-seconds` format:
+
+[source,properties]
+----
+quarkus.flow.structured-logging.enabled=true
+quarkus.flow.structured-logging.timestamp-format=epoch-seconds
+----
+
+FluentBit configuration:
+[source,conf]
+----
+[OUTPUT]
+    Name pgsql
+    Match *
+    Host postgres.example.com
+    Database workflow_logs
+    Table events
+    # timestamp column is TIMESTAMP WITH TIME ZONE
+    # epoch-seconds format inserts directly without Lua preprocessing
+----
+
+Event output:
+[source,json]
+----
+{
+  "eventType": "io.serverlessworkflow.workflow.started.v1",
+  "timestamp": 1776807366.427833,
+  "startTime": 1776807366.427833,
+  "instanceId": "abc123",
+  "workflowName": "payment-processing"
+}
+----
+
+=== Precision Handling
+
+[cols="1,2"]
+|===
+|Format |Precision
+
+|`iso8601`
+|Nanosecond (preserved in string)
+
+|`epoch-seconds`
+|Nanosecond (fractional part)
+
+|`epoch-millis`
+|Millisecond
+
+|`epoch-nanos`
+|Nanosecond
+
+|`custom`
+|Depends on pattern
+|===
+
+=== Custom Pattern Examples
+
+[source,properties]
+----
+# ISO 8601 with millisecond precision
+quarkus.flow.structured-logging.timestamp-pattern=yyyy-MM-dd'T'HH:mm:ss.SSSXXX
+
+# Simple datetime without timezone
+quarkus.flow.structured-logging.timestamp-pattern=yyyy-MM-dd HH:mm:ss
+
+# RFC 1123 format
+quarkus.flow.structured-logging.timestamp-pattern=EEE, dd MMM yyyy HH:mm:ss Z
+
+# Date only
+quarkus.flow.structured-logging.timestamp-pattern=yyyy-MM-dd
+----
+
+NOTE: When using `custom` format, the `timestamp-pattern` property is required. The application will fail at startup if the pattern is missing or invalid.
+
 === Event Filtering
 
 Control which events are logged using glob patterns:

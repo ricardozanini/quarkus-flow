@@ -45,4 +45,74 @@ public class StructuredLoggingTest {
                     "quarkus.flow.structured-logging.log-level", "INFO");
         }
     }
+
+    @QuarkusTest
+    @TestProfile(StructuredLoggingTest.EnableEpochSecondsFormat.class)
+    public static class EpochSecondsFormatTest {
+
+        @Inject
+        HelloWorkflow helloWorkflow;
+
+        @Test
+        void testEpochSecondsTimestampFormat() {
+            helloWorkflow.startInstance().await().indefinitely();
+        }
+    }
+
+    public static class EnableEpochSecondsFormat implements QuarkusTestProfile {
+        @Override
+        public Map<String, String> getConfigOverrides() {
+            return Map.of(
+                    "quarkus.flow.structured-logging.enabled", "true",
+                    "quarkus.flow.structured-logging.timestamp-format", "epoch-seconds",
+                    "quarkus.flow.structured-logging.log-level", "INFO");
+        }
+    }
+
+    @QuarkusTest
+    @TestProfile(StructuredLoggingTest.EnableEpochMillisFormat.class)
+    public static class EpochMillisFormatTest {
+
+        @Inject
+        HelloWorkflow helloWorkflow;
+
+        @Test
+        void testEpochMillisTimestampFormat() {
+            helloWorkflow.startInstance().await().indefinitely();
+        }
+    }
+
+    public static class EnableEpochMillisFormat implements QuarkusTestProfile {
+        @Override
+        public Map<String, String> getConfigOverrides() {
+            return Map.of(
+                    "quarkus.flow.structured-logging.enabled", "true",
+                    "quarkus.flow.structured-logging.timestamp-format", "epoch-millis",
+                    "quarkus.flow.structured-logging.log-level", "INFO");
+        }
+    }
+
+    @QuarkusTest
+    @TestProfile(StructuredLoggingTest.EnableCustomTimestampFormat.class)
+    public static class CustomTimestampFormatTest {
+
+        @Inject
+        HelloWorkflow helloWorkflow;
+
+        @Test
+        void testCustomTimestampFormat() {
+            helloWorkflow.startInstance().await().indefinitely();
+        }
+    }
+
+    public static class EnableCustomTimestampFormat implements QuarkusTestProfile {
+        @Override
+        public Map<String, String> getConfigOverrides() {
+            return Map.of(
+                    "quarkus.flow.structured-logging.enabled", "true",
+                    "quarkus.flow.structured-logging.timestamp-format", "custom",
+                    "quarkus.flow.structured-logging.timestamp-pattern", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                    "quarkus.flow.structured-logging.log-level", "INFO");
+        }
+    }
 }
